@@ -142,17 +142,6 @@ void complete_all_work(Queue *queue) {
   queue->next_index = 0;
 }
 
-struct MyWork {
-  char *name;
-};
-
-void my_work_code(void *data) {
-  MyWork *work = (MyWork *)data;
-
-  printf("hello: %s\n", work->name);
-}
-
-
 int main() {
   Queue queue = {};
 
