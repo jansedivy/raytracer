@@ -218,6 +218,23 @@ void render_screen(GameOffscreenBuffer *buffer, int minX, int minY, int maxX, in
   }
 }
 
+struct RenderScreenEntry {
+  GameOffscreenBuffer *buffer;
+  int minX;
+  int minY;
+  int maxX;
+  int maxY;
+  Memory *memory;
+  App *app;
+  Scene *scene;
+};
+
+void render_screen_task(void *data) {
+  RenderScreenEntry *value = (RenderScreenEntry *)data;
+
+  render_screen(value->buffer, value->minX, value->minY, value->maxX, value->maxY, value->memory, value->app, value->scene);
+}
+
 void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
   App *app = (App*)memory->permanent_storage;
 
@@ -251,8 +268,7 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
       sphere->reflection = 0.9;
     }
 
-
-    float plane_reflections = 0.1f;
+    float plane_reflections = 0.0f;
     scene.planes[0].position = vec3(0.0f, 20.0f, 0.0f);
     scene.planes[0].normal = vec3(0.0f, -1.0f, 0.0f);
     scene.planes[0].color = 0xe3e3e3;
@@ -297,7 +313,34 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
           );
 #endif
 
-    render_screen(buffer, 0, 0, buffer->width, buffer->height, memory, app, &scene);
+    int tile_count_x = 4;
+    int tile_count_y = 4;
+
+    RenderScreenEntry entries[tile_count_x * tile_count_y];
+
+    int tile_width = buffer->width / tile_count_x;
+    int tile_height = buffer->height / tile_count_y;
+
+    int count = 0;
+
+    for (int y=0; y<tile_count_y; y++) {
+      for (int x=0; x<tile_count_x; x++) {
+        RenderScreenEntry *entry = entries + count++;
+
+        entry->buffer = buffer;
+        entry->minX = x * tile_width;
+        entry->minY = y * tile_height;
+        entry->maxX = entry->minX + tile_width;
+        entry->maxY = entry->minY + tile_height;
+        entry->memory = memory;
+        entry->app = app;
+        entry->scene = &scene;
+
+        memory->add_work(memory->queue, render_screen_task, entry);
+      }
+    }
+
+    memory->complete_all_work(memory->queue);
 
 #if 0
     // NOTE: saves every frame as png image in build/animation folder

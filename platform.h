@@ -36,6 +36,10 @@ extern "C" {
   DebugReadFileResult debugReadEntireFile(const char *name);
   typedef DebugReadFileResult debugReadEntireFileType(const char *name);
 
+  typedef void PlatformWorkQueueCallback(void *data);
+  typedef void add_work_type(struct Queue *queue, PlatformWorkQueueCallback *callback, void *data);
+  typedef void complete_all_work_type(struct Queue *queue);
+
   struct Memory {
     bool is_initialized;
     bool should_reload;
@@ -46,6 +50,11 @@ extern "C" {
     void *permanent_storage;
 
     debugReadEntireFileType *debug_read_entire_file;
+
+    struct Queue *queue;
+
+    add_work_type *add_work;
+    complete_all_work_type *complete_all_work;
   };
 
   void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer);

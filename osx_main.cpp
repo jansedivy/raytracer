@@ -85,7 +85,81 @@ DebugReadFileResult debug_read_entire_file(const char *path) {
   return result;
 }
 
+struct WorkEntry {
+  PlatformWorkQueueCallback *callback;
+  void *data;
+};
+
+struct Queue {
+  int volatile count;
+  int volatile completed;
+  int volatile next_index;
+
+  WorkEntry entries[256];
+};
+
+void do_queue_work(Queue *queue) {
+  int original_next_index = queue->next_index;
+  int new_next_index = original_next_index + 1;
+
+  if (original_next_index != queue->count) {
+    SDL_bool value = SDL_AtomicCAS((SDL_atomic_t *)&queue->next_index, original_next_index, new_next_index);
+
+    if (value) {
+      WorkEntry *entry = queue->entries + original_next_index;
+      entry->callback(entry->data);
+
+      SDL_AtomicIncRef((SDL_atomic_t *)&queue->completed);
+    }
+  }
+}
+
+static int thread_function(void *data) {
+  Queue *queue = (Queue *)data;
+
+  while (true) {
+    do_queue_work(queue);
+  }
+}
+
+void add_work(Queue *queue, PlatformWorkQueueCallback *callback, void *data) {
+  WorkEntry *entry = queue->entries + queue->count;
+  entry->callback = callback;
+  entry->data = data;
+
+  SDL_CompilerBarrier();
+
+  SDL_AtomicIncRef((SDL_atomic_t *)&queue->count);
+}
+
+void complete_all_work(Queue *queue) {
+  while (queue->completed != queue->count) {
+    do_queue_work(queue);
+  }
+
+  queue->count = 0;
+  queue->completed = 0;
+  queue->next_index = 0;
+}
+
+struct MyWork {
+  char *name;
+};
+
+void my_work_code(void *data) {
+  MyWork *work = (MyWork *)data;
+
+  printf("hello: %s\n", work->name);
+}
+
+
 int main() {
+  Queue queue = {};
+
+  for (int i=0; i<7; i++) {
+    SDL_CreateThread(thread_function, "worker_thread", &queue);
+  }
+
   Memory memory;
   memory.width = 1280;
   memory.height = 720;
@@ -94,13 +168,17 @@ int main() {
   memory.should_reload = true;
   memory.permanent_storage = malloc(Megabytes(10));
 
+  memory.queue = &queue;
+  memory.add_work = add_work;
+  memory.complete_all_work = complete_all_work;
+
   GameOffscreenBuffer buffer;
-#if 1
+#if 0
   buffer.width = memory.width/4;
   buffer.height = memory.height/4;
 #else
-  buffer.width = memory.width*2;
-  buffer.height = memory.height*2;
+  buffer.width = memory.width;
+  buffer.height = memory.height;
 #endif
   buffer.bytesPerPixel = 4;
   buffer.memory = (uint8*)malloc(buffer.width*buffer.height*4);
