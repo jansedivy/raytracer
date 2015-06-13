@@ -25,6 +25,7 @@ struct Light {
 struct App {
   float total_time;
   int animation_number;
+  int number_of_iterations;
   Light light;
 };
 
@@ -54,4 +55,9 @@ struct HitResult {
   vec3 position;
   vec3 normal;
   uint32 color;
+};
+
+struct Scene {
+  Plane planes[6];
+  Sphere spheres[8];
 };

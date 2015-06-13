@@ -1,6 +1,6 @@
 #include "app.h"
 
-void drawRect(GameOffscreenBuffer *buffer, int minX, int minY, int width, int height) {
+void drawRect(GameOffscreenBuffer *buffer, int minX, int minY, int width, int height, uint32 color) {
   int maxX = minX + width;
   int maxY = minY + height;
 
@@ -15,7 +15,7 @@ void drawRect(GameOffscreenBuffer *buffer, int minX, int minY, int width, int he
     uint32 *pixel = (uint32 *)row;
 
     for (int x=minX; x<maxX; x++) {
-      *pixel++ = 0xffff00;
+      *pixel++ = color;
     }
 
     row += buffer->width * buffer->bytesPerPixel;
@@ -36,7 +36,7 @@ HitResult ray_sphere_intersect(Ray *ray, Sphere *sphere) {
 
   if (discriminant > 0.0f) {
     float t = (-b - sqrt(discriminant)) / (2 * a);
-    if (t > 0.0f) {
+    if (t >= 0.0f) {
       vec3 position = ray->start + (ray->direction * t);
 
       result.hit = true;
@@ -88,76 +88,134 @@ uint32 blend_colors(uint32 a, uint32 b, float step) {
   return ((uint8)x << 16) | ((uint8)y << 8) | ((uint8)z << 0);
 }
 
-HitResult ray_match_all(Ray *ray, Plane *planes, int planes_count, Sphere *spheres, int spheres_count, Light *light) {
+HitResult ray_match_all(Ray *ray, Plane *planes, int planes_count, Sphere *spheres, int spheres_count, Light *light, bool from_light = false) {
   uint32 reflection_color;
 
   HitResult final_hit;
   final_hit.hit = false;
   final_hit.distance = max_distance;
+  final_hit.color = 0;
 
-  for (int l=0; l<planes_count; l++) {
-    Plane *other = planes + l;
-    HitResult result = ray_plane_intersect(ray, other);
+  if (!from_light) {
+    Sphere light_sphere;
+    light_sphere.center = light->position;
+    light_sphere.radius = 8.0f;
+    light_sphere.color = 0xffff55;
+    light_sphere.reflection = 0.0f;
+
+    HitResult result = ray_sphere_intersect(ray, &light_sphere);
 
     if (result.hit && result.distance < final_hit.distance) {
       final_hit = result;
+    }
+  }
 
-      Ray light_ray;
-      light_ray.start = result.position;
-      light_ray.direction = normalize(light->position - light_ray.start);
+  {
+    for (int l=0; l<planes_count; l++) {
+      Plane *other = planes + l;
 
-      for (int l=0; l<spheres_count; l++) {
-        Sphere *sphere = spheres + l;
-        HitResult result = ray_sphere_intersect(&light_ray, sphere);
+      HitResult result = ray_plane_intersect(ray, other);
 
-        if (result.hit && result.distance <= length(light->position - light_ray.start)) {
-          final_hit.color = (final_hit.color & 0xfefefe) >> 1;
-          break;
-        }
+      if (result.hit && result.distance < final_hit.distance) {
+        final_hit = result;
       }
     }
   }
 
-  Sphere light_sphere;
-  light_sphere.center = light->position;
-  light_sphere.radius = 4.0f;
-  light_sphere.color = 0xffff55;
+  {
+    for (int l=0; l<spheres_count; l++) {
+      Sphere *other = spheres + l;
 
-  HitResult result = ray_sphere_intersect(ray, &light_sphere);
+      HitResult result = ray_sphere_intersect(ray, other);
 
-  if (result.hit && result.distance < final_hit.distance) {
-    final_hit = result;
-  }
-
-  bool in_shadow = false;
-  for (int l=0; l<spheres_count; l++) {
-    Sphere *other = spheres + l;
-
-    HitResult result = ray_sphere_intersect(ray, other);
-
-    if (result.hit && result.distance < final_hit.distance) {
-      final_hit = result;
-
-      Ray light_ray;
-      light_ray.start = result.position + result.normal * 0.001f;
-      light_ray.direction = normalize(light->position - light_ray.start);
-
-      for (int l=0; l<spheres_count; l++) {
-        Sphere *sphere = spheres + l;
-        HitResult result = ray_sphere_intersect(&light_ray, sphere);
-
-        if (result.hit) {
-          in_shadow = true;
-        }
+      if (result.hit && result.distance < final_hit.distance) {
+        final_hit = result;
       }
     }
-  }
-
-  if (in_shadow) {
-    final_hit.color = (final_hit.color & 0xfefefe) >> 1;
   }
 
   return final_hit;
+}
+
+void render_screen(GameOffscreenBuffer *buffer, int minX, int minY, int maxX, int maxY, Memory *memory, App *app, Scene *scene) {
+  int pitch = buffer->width * buffer->bytesPerPixel;
+
+  float aspect = (float)memory->width / (float)memory->height;
+
+  float size_x = 1;
+  float size_y = ((float)memory->height / aspect) / (float)memory->height;
+
+  float x_pos = 0.0f;
+  float y_pos = 0.0f;
+
+  uint8 *row = ((uint8 *)buffer->memory) + (minX*buffer->bytesPerPixel + minY*buffer->width*buffer->bytesPerPixel);
+
+  for (int y=minY; y<maxY; y++) {
+    uint8 *pixel = (uint8 *)row;
+
+    for (int x=minX; x<maxX; x++) {
+      x_pos = (x / (float)buffer->width) * 2.0f - 1.0f;
+      y_pos = ((y / (float)buffer->height) * 2.0f - 1.0f) / aspect;
+
+      Ray ray;
+      ray.direction = normalize(vec3(x_pos, y_pos, 1.0f));
+      ray.start = vec3(0.0f, -40.0f, -120.0f);
+
+#if 0
+      ray.start = vec3(0.0f, -20.0f, (sin(app->total_time) + 1.0f)/2.0f * -120.0f);
+      ray.direction = normalize(vec3(x_pos + sin(app->total_time)/5.0f, y_pos + cos(app->total_time*2.0f)/8.0f, 1.0f));
+#endif
+
+      float distance = max_distance;
+      bool first = true;
+
+      float reflection;
+      uint32 color = 0;
+
+      for (int i=0; i<app->number_of_iterations; i++) {
+        HitResult hit = ray_match_all(&ray, scene->planes, array_count(scene->planes), scene->spheres, array_count(scene->spheres), &app->light);
+
+        if (hit.hit) {
+          if (first) {
+            color = hit.color;
+            reflection = hit.reflection;
+          } 
+
+#if 0
+          Ray shadow_ray;
+          shadow_ray.direction = normalize(app->light.position - hit.position);
+          shadow_ray.start = hit.position + hit.normal * 0.001f;
+          HitResult shadow_hit = ray_match_all(&shadow_ray, scene->planes, array_count(scene->planes), scene->spheres, array_count(scene->spheres), &app->light, true);
+          if (shadow_hit.hit && shadow_hit.distance <= length(app->light.position - shadow_ray.start)) {
+            color = (color & 0xfefefe) >> 1;
+          }
+#endif
+
+          ray.start = hit.position;
+          ray.direction = reflect(ray.direction, hit.normal);
+
+          if (!first) {
+            color = blend_colors(color, hit.color, reflection);
+            reflection *= hit.reflection;
+          }
+
+          first = false;
+
+          if (reflection <= 0.0f) {
+            break;
+          }
+        }
+      }
+
+      *pixel++ = (uint8)(color >> 16);
+      *pixel++ = (uint8)(color >> 8);
+      *pixel++ = (uint8)(color >> 0);
+
+      *pixel++ = 255;
+    }
+
+    row += pitch;
+  }
 }
 
 void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
@@ -171,141 +229,75 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
     app->animation_number = 0;
   }
 
+  app->number_of_iterations = 10;
+
   app->total_time += 1.0f/24.0f;
 
   if (memory->should_reload) {
     memory->should_reload = false;
 
-    drawRect(buffer, 0, 0, buffer->width, buffer->height);
+    drawRect(buffer, 0, 0, buffer->width, buffer->height, 0);
 
-    int pitch = buffer->width * buffer->bytesPerPixel;
+    Scene scene;
 
-    uint8 *row = (uint8 *)buffer->memory;
-
-    float x_pos = 0.0f;
-    float y_pos = 0.0f;
-
-    float aspect = (float)memory->width / (float)memory->height;
-
-    float size_x = 1;
-    float size_y = ((float)memory->height / aspect) / (float)memory->height;
-
-    Sphere spheres[8];
-
-    for (int i=0; i<array_count(spheres); i++) {
-      Sphere *sphere = spheres + i;
+    for (int i=0; i<array_count(scene.spheres); i++) {
+      Sphere *sphere = scene.spheres + i;
 
       sphere->center.x = (i + 1) * 3290 % 131 - 80.0f;
       sphere->center.y = (i + 1) * 6199 % 89 - 80.0f;
       sphere->center.z = (i + 1) * 7177 % 47;
       sphere->color = ((((i+1) * 321) % 255) << 16 | (((i+1) * 483) % 255) << 8 | (((i+1) * 190) % 255) << 0);
       sphere->radius = ((i+1) * 479) % 20;
-      sphere->reflection = 0.3;
+      sphere->reflection = 0.9;
     }
 
-    Plane planes[6];
-    planes[0].position = vec3(0.0f, 20.0f, 0.0f);
-    planes[0].normal = vec3(0.0f, 1.0f, 0.0f);
-    planes[0].color = 0xe3e3e3;
-    planes[0].reflection = 0.0f;
 
-    planes[1].position = vec3(-110.0f, 20.0f, 0.0f);
-    planes[1].normal = vec3(1.0f, 0.0f, 0.0f);
-    planes[1].color = 0xff0000;
-    planes[1].reflection = 0.0f;
+    float plane_reflections = 0.1f;
+    scene.planes[0].position = vec3(0.0f, 20.0f, 0.0f);
+    scene.planes[0].normal = vec3(0.0f, -1.0f, 0.0f);
+    scene.planes[0].color = 0xe3e3e3;
+    scene.planes[0].reflection = plane_reflections;
 
-    planes[2].position = vec3(110.0f, 20.0f, 0.0f);
-    planes[2].normal = vec3(-1.0f, 0.0f, 0.0f);
-    planes[2].color = 0x00ff00;
-    planes[2].reflection = 0.0f;
+    scene.planes[1].position = vec3(-110.0f, 20.0f, 0.0f);
+    scene.planes[1].normal = vec3(1.0f, 0.0f, 0.0f);
+    scene.planes[1].color = 0xff0000;
+    scene.planes[1].reflection = plane_reflections;
 
-    planes[3].position = vec3(0.0f, 0.0f, 80.0f);
-    planes[3].normal = vec3(0.0f, 0.0f, 1.0f);
-    planes[3].color = 0xbbbbbb;
-    planes[3].reflection = 0.0f;
+    scene.planes[2].position = vec3(110.0f, 20.0f, 0.0f);
+    scene.planes[2].normal = vec3(-1.0f, 0.0f, 0.0f);
+    scene.planes[2].color = 0x00ff00;
+    scene.planes[2].reflection = plane_reflections;
 
-    planes[4].position = vec3(0.0f, -110.0f, 0.0f);
-    planes[4].normal = vec3(0.0f, -1.0f, 0.0f);
-    planes[4].color = 0xe3e3e3;
-    planes[4].reflection = 0.0f;
+    scene.planes[3].position = vec3(0.0f, 0.0f, 80.0f);
+    scene.planes[3].normal = vec3(0.0f, 0.0f, -1.0f);
+    scene.planes[3].color = 0xbbbbbb;
+    scene.planes[3].reflection = plane_reflections;
 
-    planes[5].position = vec3(0.0f, 0.0f, -130.0f);
-    planes[5].normal = vec3(0.0f, 0.0f, -1.0f);
-    planes[5].color = 0xbbbbbb;
-    planes[5].reflection = 0.0f;
+    scene.planes[4].position = vec3(0.0f, -110.0f, 0.0f);
+    scene.planes[4].normal = vec3(0.0f, 1.0f, 0.0f);
+    scene.planes[4].color = 0xe3e3e3;
+    scene.planes[4].reflection = plane_reflections;
+
+    scene.planes[5].position = vec3(0.0f, 0.0f, -130.0f);
+    scene.planes[5].normal = vec3(0.0f, 0.0f, 1.0f);
+    scene.planes[5].color = 0xbbbbbb;
+    scene.planes[5].reflection = plane_reflections;
 
 #if 1
     app->light.position = vec3(sin(app->total_time*2.0f) * 100.0f, sin(app->total_time*3.0f) * 60.0f - 40.0f, sin(app->total_time*3.0f) * 20.0f + 40.0f);
     memory->should_reload = true;
 #endif
 
-    for (int y=0; y<buffer->height; y++) {
-      uint8 *pixel = (uint8 *)row;
-
-      for (int x=0; x<buffer->width; x++) {
-        x_pos = (x / (float)buffer->width) * 2.0f - 1.0f;
-        y_pos = ((y / (float)buffer->height) * 2.0f - 1.0f) / aspect;
-
-        Ray ray;
-        ray.direction = normalize(vec3(x_pos, y_pos, 1.0f));
-        ray.start = vec3(0.0f, -40.0f, -120.0f);
-#if 0
-        ray.start = vec3(
-            (((float)input.mouseX / (float)memory->width) * 2.0f - 1.0f) * 100.0f,
-            (((float)input.mouseY / (float)memory->height) * 2.0f - 1.0f) * 100.0f,
-            -120.0f);
-
-        memory->should_reload = true;
+#if 1
+      memory->should_reload = true;
+      app->light.position = vec3(
+          (((float)input.mouseX / (float)memory->width) * 2.0f - 1.0f) * 100.0f,
+          (((float)input.mouseY / (float)memory->height) * 2.0f - 1.0f) * 100.0f,
+          40.0f
+          );
 #endif
 
-#if 0
-        ray.start = vec3(0.0f, -20.0f, (sin(app->total_time) + 1.0f)/2.0f * -120.0f);
-        ray.direction = normalize(vec3(x_pos + sin(app->total_time)/5.0f, y_pos + cos(app->total_time*2.0f)/8.0f, 1.0f));
-#endif
-
-#if 0
-        memory->should_reload = true;
-        app->light.position = vec3(
-            (((float)input.mouseX / (float)memory->width) * 2.0f - 1.0f) * 100.0f,
-            (((float)input.mouseY / (float)memory->height) * 2.0f - 1.0f) * 100.0f,
-            40.0f
-            );
-#endif
-
-        float distance = max_distance;
-        bool first = true;
-
-        float reflection;
-        uint32 color;
-
-        for (int i=0; i<4; i++) {
-          HitResult hit = ray_match_all(&ray, planes, array_count(planes), spheres, array_count(spheres), &app->light);
-
-          if (hit.hit) {
-            if (first) {
-              color = hit.color;
-              reflection = hit.reflection;
-            } else {
-              color = blend_colors(color, hit.color, reflection);
-              reflection *= hit.reflection;
-            }
-
-            first = false;
-
-            ray.start = hit.position;
-            ray.direction = reflect(ray.direction, hit.normal);
-          }
-        }
-
-        *pixel++ = (uint8)(color >> 16);
-        *pixel++ = (uint8)(color >> 8);
-        *pixel++ = (uint8)(color >> 0);
-
-        *pixel++ = 255;
-      }
-
-      row += pitch;
-    }
+    render_screen(buffer, 0, 0, buffer->width, buffer->height, memory, app, &scene);
 
 #if 0
     // NOTE: saves every frame as png image in build/animation folder

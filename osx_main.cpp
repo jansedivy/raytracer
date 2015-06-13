@@ -99,8 +99,8 @@ int main() {
   buffer.width = memory.width/4;
   buffer.height = memory.height/4;
 #else
-  buffer.width = memory.width;
-  buffer.height = memory.height;
+  buffer.width = memory.width*2;
+  buffer.height = memory.height*2;
 #endif
   buffer.bytesPerPixel = 4;
   buffer.memory = (uint8*)malloc(buffer.width*buffer.height*4);
