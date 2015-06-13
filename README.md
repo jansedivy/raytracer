@@ -6,7 +6,7 @@ Very simple raytracer written in C.
 
 ## Features
 
-- Code is automatically reloaded when you compile modify source and compile
+- Code is automatically reloaded when you compile modified source
 - Each frame can be saved as image for animations
 
 ## Installation
@@ -17,6 +17,9 @@ Very simple raytracer written in C.
 
 ### Compilation
 
+#### OSX
 ```
-./build.sh
+./build.sh # compile
+./build/main # run
 ```
+
