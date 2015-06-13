@@ -1,6 +1,6 @@
 #include "app.h"
 
-void drawRect(game_offscreen_buffer *buffer, int minX, int minY, int width, int height) {
+void drawRect(GameOffscreenBuffer *buffer, int minX, int minY, int width, int height) {
   int maxX = minX + width;
   int maxY = minY + height;
 
@@ -160,11 +160,11 @@ HitResult ray_match_all(Ray *ray, Plane *planes, int planes_count, Sphere *spher
   return final_hit;
 }
 
-void Tick(Memory *memory, Input input, game_offscreen_buffer *buffer) {
+void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
   App *app = (App*)memory->permanent_storage;
 
-  if (!memory->isInitilized) {
-    memory->isInitilized = true;
+  if (!memory->is_initialized) {
+    memory->is_initialized = true;
 
     app->light.position = vec3(0.0f, -90.0f, 35.0f);
     app->total_time = 0.0f;

@@ -14,52 +14,52 @@
 #include "SDL2/SDL.h"
 #include "platform.h"
 
-struct app_code {
-  TickType* Tick;
+struct AppCode {
+  TickType* tick;
 
-  time_t LastTimeWrite;
+  time_t last_time_write;
 
-  const char *Path;
-  void* Library;
+  const char *path;
+  void* library;
 };
 
-time_t GetlastWriteTime(const char *Path) {
-  time_t Result = 0;
+time_t get_last_write_time(const char *path) {
+  time_t result = 0;
 
   struct stat FileStat;
 
-  if (stat(Path, &FileStat) == 0) {
-    Result = FileStat.st_mtimespec.tv_sec;
+  if (stat(path, &FileStat) == 0) {
+    result = FileStat.st_mtimespec.tv_sec;
   }
 
-  return Result;
+  return result;
 }
 
-app_code LoadAppCode() {
-  app_code Result;
+AppCode load_app_code() {
+  AppCode result;
 
   // TODO(sedivy): move string into constant
-  const char *Path = "app.dylib";
+  const char *path = "app.dylib";
 
-  void *Lib = dlopen(Path, RTLD_LAZY | RTLD_GLOBAL);
+  void *Lib = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
   if (!Lib) {
     fprintf(stderr, "%s\n", dlerror());
   }
 
-  Result.Library = Lib;
-  Result.LastTimeWrite = GetlastWriteTime(Path);
-  Result.Path = Path;
+  result.library = Lib;
+  result.last_time_write = get_last_write_time(path);
+  result.path = path;
 
-  Result.Tick = (TickType*)dlsym(Lib, "Tick");
+  result.tick = (TickType*)dlsym(Lib, "tick");
 
-  return Result;
+  return result;
 }
 
-void UnloadAppCode(app_code *Code) {
-  dlclose(Code->Library);
+void UnloadAppCode(AppCode *code) {
+  dlclose(code->library);
 }
 
-DebugReadFileResult debugReadEntireFile(const char *path) {
+DebugReadFileResult debug_read_entire_file(const char *path) {
   DebugReadFileResult result = {0};
 
   int file = open(path, O_RDONLY);
@@ -89,12 +89,12 @@ int main() {
   Memory memory;
   memory.width = 1280;
   memory.height = 720;
-  memory.isInitilized = false;
-  memory.debugReadEntireFile = debugReadEntireFile;
+  memory.is_initialized = false;
+  memory.debug_read_entire_file = debug_read_entire_file;
   memory.should_reload = true;
   memory.permanent_storage = malloc(Megabytes(10));
 
-  game_offscreen_buffer buffer;
+  GameOffscreenBuffer buffer;
 #if 1
   buffer.width = memory.width/4;
   buffer.height = memory.height/4;
@@ -107,17 +107,9 @@ int main() {
 
   chdir(SDL_GetBasePath());
 
-  app_code Code = LoadAppCode();
+  AppCode code = load_app_code();
 
   SDL_Init(SDL_INIT_EVERYTHING);
-
-  /* SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE); */
-  /* SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3); */
-  /* SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2); */
-
-  /* SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24); */
-  /* SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); */
-  /* SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8); */
 
   SDL_Window *window = SDL_CreateWindow("Game",
       SDL_WINDOWPOS_UNDEFINED,
@@ -142,10 +134,10 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
   while (running) {
-    if (GetlastWriteTime(Code.Path) > Code.LastTimeWrite) {
+    if (get_last_write_time(code.path) > code.last_time_write) {
       memory.should_reload = true;
-      UnloadAppCode(&Code);
-      Code = LoadAppCode();
+      UnloadAppCode(&code);
+      code = load_app_code();
     }
 
     while (SDL_PollEvent(&event)) {
@@ -159,7 +151,7 @@ int main() {
     Input input;
     SDL_GetMouseState(&input.mouseX, &input.mouseY);
 
-    Code.Tick(&memory, input, &buffer);
+    code.tick(&memory, input, &buffer);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

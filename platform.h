@@ -14,7 +14,7 @@ extern "C" {
     int mouseY;
   };
 
-  struct game_offscreen_buffer {
+  struct GameOffscreenBuffer {
     int width;
     int height;
     int bytesPerPixel;
@@ -37,7 +37,7 @@ extern "C" {
   typedef DebugReadFileResult debugReadEntireFileType(const char *name);
 
   struct Memory {
-    bool isInitilized;
+    bool is_initialized;
     bool should_reload;
 
     int width;
@@ -45,9 +45,9 @@ extern "C" {
 
     void *permanent_storage;
 
-    debugReadEntireFileType *debugReadEntireFile;
+    debugReadEntireFileType *debug_read_entire_file;
   };
 
-  void Tick(Memory *memory, Input input, game_offscreen_buffer *buffer);
-  typedef void TickType(Memory *memory, Input input, game_offscreen_buffer *buffer);
+  void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer);
+  typedef void TickType(Memory *memory, Input input, GameOffscreenBuffer *buffer);
 }
