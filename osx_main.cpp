@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 
 #include "SDL2/SDL.h"
+#include "platform.h"
 
 struct app_code {
   TickType* Tick;
@@ -86,14 +87,21 @@ DebugReadFileResult debugReadEntireFile(const char *path) {
 
 int main() {
   Memory memory;
+  memory.width = 1280;
+  memory.height = 720;
   memory.isInitilized = false;
-  memory.app.width = 1280;
-  memory.app.height = 720;
   memory.debugReadEntireFile = debugReadEntireFile;
+  memory.should_reload = true;
+  memory.permanent_storage = malloc(Megabytes(10));
 
   game_offscreen_buffer buffer;
-  buffer.width = 1280;
-  buffer.height = 720;
+#if 1
+  buffer.width = memory.width/4;
+  buffer.height = memory.height/4;
+#else
+  buffer.width = memory.width;
+  buffer.height = memory.height;
+#endif
   buffer.bytesPerPixel = 4;
   buffer.memory = (uint8*)malloc(buffer.width*buffer.height*4);
 
@@ -114,7 +122,7 @@ int main() {
   SDL_Window *window = SDL_CreateWindow("Game",
       SDL_WINDOWPOS_UNDEFINED,
       SDL_WINDOWPOS_UNDEFINED,
-      memory.app.width, memory.app.height,
+      memory.width, memory.height,
       SDL_WINDOW_OPENGL);
 
   SDL_GLContext context = SDL_GL_CreateContext(window);
@@ -128,13 +136,14 @@ int main() {
   GLuint texture;
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, memory.app.width, memory.app.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, buffer.width, buffer.height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
   while (running) {
     if (GetlastWriteTime(Code.Path) > Code.LastTimeWrite) {
+      memory.should_reload = true;
       UnloadAppCode(&Code);
       Code = LoadAppCode();
     }
@@ -185,7 +194,7 @@ int main() {
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer.memory);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer.memory);
 
     SDL_GL_SwapWindow(window);
   }

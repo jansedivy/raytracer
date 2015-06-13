@@ -3,6 +3,11 @@
 typedef uint8_t uint8;
 typedef uint32_t uint32;
 
+#define Kilobytes(Value) ((Value)*1024LL)
+#define Megabytes(Value) (Kilobytes(Value)*1024LL)
+#define Gigabytes(Value) (Megabytes(Value)*1024LL)
+#define Terabytes(Value) (Gigabytes(Value)*1024LL)
+
 extern "C" {
   struct Input {
     int mouseX;
@@ -31,19 +36,14 @@ extern "C" {
   DebugReadFileResult debugReadEntireFile(const char *name);
   typedef DebugReadFileResult debugReadEntireFileType(const char *name);
 
-  struct App {
+  struct Memory {
+    bool isInitilized;
+    bool should_reload;
+
     int width;
     int height;
 
-    int x;
-    int y;
-
-    LoadedBitmap image;
-  };
-
-  struct Memory {
-    App app;
-    bool isInitilized;
+    void *permanent_storage;
 
     debugReadEntireFileType *debugReadEntireFile;
   };
