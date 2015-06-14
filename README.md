@@ -2,7 +2,7 @@
 
 Very simple raytracer written in C.
 
-![Preview](https://upx.cz/2xX)
+![Preview](https://upx.cz/2xn)
 
 ## Features
 
