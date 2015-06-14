@@ -267,7 +267,7 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
       sphere->reflection = 0.3;
     }
 
-    float plane_reflections = 0.1f;
+    float plane_reflections = 0.2f;
     scene.planes[0].position = vec3(0.0f, 20.0f, 0.0f);
     scene.planes[0].normal = vec3(0.0f, -1.0f, 0.0f);
     scene.planes[0].color = 0xe3e3e3;
