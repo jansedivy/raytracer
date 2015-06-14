@@ -301,18 +301,16 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
     scene.planes[5].color = 0xbbbbbb;
     scene.planes[5].reflection = plane_reflections;
 
-#if 1
-    app->light.position = vec3(sin(app->total_time*2.0f) * 100.0f, sin(app->total_time*3.0f) * 60.0f - 40.0f, sin(app->total_time*3.0f) * 20.0f + 40.0f);
-    memory->should_reload = true;
-#endif
-
-#if 1
+#if 0
       memory->should_reload = true;
       app->light.position = vec3(
           (((float)input.mouseX / (float)memory->width) * 2.0f - 1.0f) * 100.0f,
           (((float)input.mouseY / (float)memory->height) * 2.0f - 1.0f) * 100.0f,
           40.0f
           );
+#else
+    app->light.position = vec3(sin(app->total_time*2.0f) * 100.0f, sin(app->total_time*3.0f) * 60.0f - 40.0f, sin(app->total_time*3.0f) * 20.0f + 40.0f);
+    memory->should_reload = true;
 #endif
 
     int tile_count_x = 6;
