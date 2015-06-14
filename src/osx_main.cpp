@@ -166,8 +166,8 @@ int main() {
   }
 
   Memory memory;
-  memory.width = 1280/2;
-  memory.height = 720/2;
+  memory.width = 1280;
+  memory.height = 720;
   memory.is_initialized = false;
   memory.debug_read_entire_file = debug_read_entire_file;
   memory.should_reload = true;
@@ -180,8 +180,8 @@ int main() {
 
   GameOffscreenBuffer buffer;
 #if 1
-  buffer.width = memory.width;
-  buffer.height = memory.height;
+  buffer.width = memory.width/2;
+  buffer.height = memory.height/2;
 #else
   buffer.width = memory.width;
   buffer.height = memory.height;
