@@ -315,8 +315,8 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
           );
 #endif
 
-    int tile_count_x = 4;
-    int tile_count_y = 4;
+    int tile_count_x = 6;
+    int tile_count_y = 6;
 
     RenderScreenEntry entries[tile_count_x * tile_count_y];
 
