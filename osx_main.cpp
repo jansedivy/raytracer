@@ -161,7 +161,7 @@ int main() {
   Queue queue = {};
   queue.semaphore = SDL_CreateSemaphore(0);
 
-  for (int i=0; i<4; i++) {
+  for (int i=0; i<SDL_GetCPUCount(); i++) {
     SDL_CreateThread(thread_function, "worker_thread", &queue);
   }
 
