@@ -198,7 +198,7 @@ void render_screen(GameOffscreenBuffer *buffer, int minX, int minY, int maxX, in
           ray.start = hit.position;
           ray.direction = reflect(ray.direction, hit.normal);
 
-          if (hit.reflection <= 0.0f) {
+          if (reflection < 0.01f) {
             break;
           }
         }
@@ -267,7 +267,7 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
       sphere->reflection = 0.3;
     }
 
-    float plane_reflections = 0.0f;
+    float plane_reflections = 0.1f;
     scene.planes[0].position = vec3(0.0f, 20.0f, 0.0f);
     scene.planes[0].normal = vec3(0.0f, -1.0f, 0.0f);
     scene.planes[0].color = 0xe3e3e3;
