@@ -1,7 +1,9 @@
 set -e
 
-mkdir -p build
 mkdir -p build/animation
 
-clang++ -dynamiclib app.cpp -o build/app.dylib -g -O2 -ffast-math
-clang++ osx_main.cpp -o build/raytracer -lSDL2 -g -O2 -framework OpenGl
+mkdir -p build/raytracer.app/Contents/MacOS
+mkdir -p build/raytracer.app/Contents/Resources
+
+clang++ -dynamiclib app.cpp -o build/raytracer.app/Contents/Resources/app.dylib -g -O2 -ffast-math
+clang++ osx_main.cpp -o build/raytracer.app/Contents/MacOS/raytracer -lSDL2 -g -O2 -framework OpenGl
