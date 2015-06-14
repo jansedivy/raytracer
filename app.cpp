@@ -176,32 +176,29 @@ void render_screen(GameOffscreenBuffer *buffer, int minX, int minY, int maxX, in
         HitResult hit = ray_match_all(&ray, scene->planes, array_count(scene->planes), scene->spheres, array_count(scene->spheres), &app->light);
 
         if (hit.hit) {
-          if (first) {
-            color = hit.color;
-            reflection = hit.reflection;
-          } 
-
-#if 0
+#if 1
           Ray shadow_ray;
           shadow_ray.direction = normalize(app->light.position - hit.position);
           shadow_ray.start = hit.position + hit.normal * 0.001f;
           HitResult shadow_hit = ray_match_all(&shadow_ray, scene->planes, array_count(scene->planes), scene->spheres, array_count(scene->spheres), &app->light, true);
           if (shadow_hit.hit && shadow_hit.distance <= length(app->light.position - shadow_ray.start)) {
-            color = (color & 0xfefefe) >> 1;
+            hit.color = (hit.color & 0xfefefe) >> 1;
           }
 #endif
+
+          if (first) {
+            color = hit.color;
+            reflection = hit.reflection;
+          } else {
+            color = blend_colors(color, hit.color, reflection);
+            reflection *= hit.reflection;
+          }
+          first = false;
 
           ray.start = hit.position;
           ray.direction = reflect(ray.direction, hit.normal);
 
-          if (!first) {
-            color = blend_colors(color, hit.color, reflection);
-            reflection *= hit.reflection;
-          }
-
-          first = false;
-
-          if (reflection <= 0.0f) {
+          if (hit.reflection <= 0.0f) {
             break;
           }
         }
