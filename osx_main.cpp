@@ -183,7 +183,7 @@ int main() {
 
   SDL_Init(SDL_INIT_EVERYTHING);
 
-  SDL_Window *window = SDL_CreateWindow("Game",
+  SDL_Window *window = SDL_CreateWindow("RayTracer",
       SDL_WINDOWPOS_UNDEFINED,
       SDL_WINDOWPOS_UNDEFINED,
       memory.width, memory.height,
