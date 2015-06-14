@@ -236,6 +236,8 @@ void render_screen_task(void *data) {
 }
 
 void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
+  uint32 start = memory->get_time();
+
   App *app = (App*)memory->permanent_storage;
 
   if (!memory->is_initialized) {
@@ -354,4 +356,7 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
     app->animation_number += 1;
 #endif
   }
+
+  uint32 diff = memory->get_time() - start;
+  printf("%d\n", diff);
 }

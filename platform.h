@@ -39,6 +39,7 @@ extern "C" {
   typedef void PlatformWorkQueueCallback(void *data);
   typedef void add_work_type(struct Queue *queue, PlatformWorkQueueCallback *callback, void *data);
   typedef void complete_all_work_type(struct Queue *queue);
+  typedef uint32 get_time_type();
 
   struct Memory {
     bool is_initialized;
@@ -55,6 +56,8 @@ extern "C" {
 
     add_work_type *add_work;
     complete_all_work_type *complete_all_work;
+
+    get_time_type *get_time;
   };
 
   void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer);

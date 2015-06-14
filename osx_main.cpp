@@ -142,6 +142,10 @@ void complete_all_work(Queue *queue) {
   queue->next_index = 0;
 }
 
+uint32 get_time() {
+  return SDL_GetTicks();
+}
+
 int main() {
   Queue queue = {};
 
@@ -156,6 +160,7 @@ int main() {
   memory.debug_read_entire_file = debug_read_entire_file;
   memory.should_reload = true;
   memory.permanent_storage = malloc(Megabytes(10));
+  memory.get_time = &get_time;
 
   memory.queue = &queue;
   memory.add_work = add_work;
