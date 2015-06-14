@@ -336,7 +336,11 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
         entry->app = app;
         entry->scene = &scene;
 
+#if 1
         memory->add_work(memory->queue, render_screen_task, entry);
+#else
+        render_screen_task(entry);
+#endif
       }
     }
 
