@@ -298,7 +298,7 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
     scene.planes[5].color = 0xbbbbbb;
     scene.planes[5].reflection = plane_reflections;
 
-#if 0
+#if 1
       memory->should_reload = true;
       app->light.position.x = lerp(app->light.position.x, (((float)input.mouseX / (float)memory->width) * 2.0f - 1.0f) * 100.0f, 0.1);
       app->light.position.y = lerp(app->light.position.y, (((float)input.mouseY / (float)memory->height) * 2.0f - 1.0f) * 100.0f, 0.1);
