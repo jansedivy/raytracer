@@ -59,5 +59,5 @@ struct HitResult {
 
 struct Scene {
   Plane planes[6];
-  Sphere spheres[8];
+  Sphere spheres[7];
 };

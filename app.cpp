@@ -267,7 +267,7 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
       sphere->center.z = (i + 1) * 7177 % 47;
       sphere->color = ((((i+1) * 321) % 255) << 16 | (((i+1) * 483) % 255) << 8 | (((i+1) * 190) % 255) << 0);
       sphere->radius = ((i+1) * 479) % 20;
-      sphere->reflection = 0.9;
+      sphere->reflection = 0.3;
     }
 
     float plane_reflections = 0.0f;
