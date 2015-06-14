@@ -166,8 +166,8 @@ int main() {
   }
 
   Memory memory;
-  memory.width = 1280;
-  memory.height = 720;
+  memory.width = 1280/2;
+  memory.height = 720/2;
   memory.is_initialized = false;
   memory.debug_read_entire_file = debug_read_entire_file;
   memory.should_reload = true;
@@ -179,9 +179,9 @@ int main() {
   memory.complete_all_work = complete_all_work;
 
   GameOffscreenBuffer buffer;
-#if 0
-  buffer.width = memory.width/2;
-  buffer.height = memory.height/2;
+#if 1
+  buffer.width = memory.width;
+  buffer.height = memory.height;
 #else
   buffer.width = memory.width;
   buffer.height = memory.height;
@@ -214,8 +214,8 @@ int main() {
   glBindTexture(GL_TEXTURE_2D, texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, buffer.width, buffer.height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   while (running) {
     if (get_last_write_time(code.path) > code.last_time_write) {
