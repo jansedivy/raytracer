@@ -96,9 +96,13 @@ struct Queue {
   int volatile next_index;
 
   WorkEntry entries[256];
+
+  SDL_sem *semaphore;
 };
 
-void do_queue_work(Queue *queue) {
+bool do_queue_work(Queue *queue) {
+  bool sleep = false;
+
   int original_next_index = queue->next_index;
   int new_next_index = original_next_index + 1;
 
@@ -111,14 +115,20 @@ void do_queue_work(Queue *queue) {
 
       SDL_AtomicIncRef((SDL_atomic_t *)&queue->completed);
     }
+  } else {
+    sleep = true;
   }
+
+  return sleep;
 }
 
 static int thread_function(void *data) {
   Queue *queue = (Queue *)data;
 
   while (true) {
-    do_queue_work(queue);
+    if (do_queue_work(queue)) {
+      SDL_SemWait(queue->semaphore);
+    }
   }
 }
 
@@ -130,6 +140,7 @@ void add_work(Queue *queue, PlatformWorkQueueCallback *callback, void *data) {
   SDL_CompilerBarrier();
 
   SDL_AtomicIncRef((SDL_atomic_t *)&queue->count);
+  SDL_SemPost(queue->semaphore);
 }
 
 void complete_all_work(Queue *queue) {
@@ -148,6 +159,7 @@ uint32 get_time() {
 
 int main() {
   Queue queue = {};
+  queue.semaphore = SDL_CreateSemaphore(0);
 
   for (int i=0; i<7; i++) {
     SDL_CreateThread(thread_function, "worker_thread", &queue);
