@@ -180,8 +180,8 @@ int main() {
 
   GameOffscreenBuffer buffer;
 #if 0
-  buffer.width = memory.width/4;
-  buffer.height = memory.height/4;
+  buffer.width = memory.width/2;
+  buffer.height = memory.height/2;
 #else
   buffer.width = memory.width;
   buffer.height = memory.height;
