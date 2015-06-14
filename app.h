@@ -22,13 +22,6 @@ struct Light {
   vec3 position;
 };
 
-struct App {
-  float total_time;
-  int animation_number;
-  int number_of_iterations;
-  Light light;
-};
-
 struct Sphere {
   vec3 center;
   uint32 color;
@@ -43,6 +36,19 @@ struct Plane {
   float reflection;
 };
 
+struct Scene {
+  Plane planes[6];
+  Sphere spheres[7];
+};
+
+struct App {
+  float total_time;
+  int animation_number;
+  int number_of_iterations;
+  Light light;
+  Scene scene;
+};
+
 struct Ray {
   vec3 start;
   vec3 direction;
@@ -55,9 +61,4 @@ struct HitResult {
   vec3 position;
   vec3 normal;
   uint32 color;
-};
-
-struct Scene {
-  Plane planes[6];
-  Sphere spheres[7];
 };

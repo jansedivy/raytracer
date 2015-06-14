@@ -88,7 +88,7 @@ uint32 blend_colors(uint32 a, uint32 b, float step) {
   return ((uint8)x << 16) | ((uint8)y << 8) | ((uint8)z << 0);
 }
 
-HitResult ray_match_all(Ray *ray, Plane *planes, int planes_count, Sphere *spheres, int spheres_count, Light *light, bool from_light = false) {
+HitResult ray_match_all(Ray *ray, Scene *scene, Light *light, bool from_light = false) {
   uint32 reflection_color;
 
   HitResult final_hit;
@@ -111,8 +111,8 @@ HitResult ray_match_all(Ray *ray, Plane *planes, int planes_count, Sphere *spher
   }
 
   {
-    for (int l=0; l<planes_count; l++) {
-      Plane *other = planes + l;
+    for (int l=0; l<array_count(scene->planes); l++) {
+      Plane *other = scene->planes + l;
 
       HitResult result = ray_plane_intersect(ray, other);
 
@@ -123,8 +123,8 @@ HitResult ray_match_all(Ray *ray, Plane *planes, int planes_count, Sphere *spher
   }
 
   {
-    for (int l=0; l<spheres_count; l++) {
-      Sphere *other = spheres + l;
+    for (int l=0; l<array_count(scene->spheres); l++) {
+      Sphere *other = scene->spheres + l;
 
       HitResult result = ray_sphere_intersect(ray, other);
 
@@ -173,14 +173,14 @@ void render_screen(GameOffscreenBuffer *buffer, int minX, int minY, int maxX, in
       uint32 color = 0;
 
       for (int i=0; i<app->number_of_iterations; i++) {
-        HitResult hit = ray_match_all(&ray, scene->planes, array_count(scene->planes), scene->spheres, array_count(scene->spheres), &app->light);
+        HitResult hit = ray_match_all(&ray, scene, &app->light);
 
         if (hit.hit) {
 #if 1
           Ray shadow_ray;
           shadow_ray.direction = normalize(app->light.position - hit.position);
           shadow_ray.start = hit.position + hit.normal * 0.001f;
-          HitResult shadow_hit = ray_match_all(&shadow_ray, scene->planes, array_count(scene->planes), scene->spheres, array_count(scene->spheres), &app->light, true);
+          HitResult shadow_hit = ray_match_all(&shadow_ray, scene, &app->light, true);
           if (shadow_hit.hit && shadow_hit.distance <= length(app->light.position - shadow_ray.start)) {
             hit.color = (hit.color & 0xfefefe) >> 1;
           }
@@ -243,21 +243,9 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
     app->light.position = vec3(0.0f, -90.0f, 35.0f);
     app->total_time = 0.0f;
     app->animation_number = 0;
-  }
 
-  app->number_of_iterations = 10;
-
-  app->total_time += 1.0f/24.0f;
-
-  if (memory->should_reload) {
-    memory->should_reload = false;
-
-    drawRect(buffer, 0, 0, buffer->width, buffer->height, 0);
-
-    Scene scene;
-
-    for (int i=0; i<array_count(scene.spheres); i++) {
-      Sphere *sphere = scene.spheres + i;
+    for (int i=0; i<array_count(app->scene.spheres); i++) {
+      Sphere *sphere = app->scene.spheres + i;
 
       sphere->center.x = (i + 1) * 3290 % 131 - 80.0f;
       sphere->center.y = (i + 1) * 6199 % 89 - 80.0f;
@@ -268,35 +256,45 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
     }
 
     float plane_reflections = 0.2f;
-    scene.planes[0].position = vec3(0.0f, 20.0f, 0.0f);
-    scene.planes[0].normal = vec3(0.0f, -1.0f, 0.0f);
-    scene.planes[0].color = 0xe3e3e3;
-    scene.planes[0].reflection = plane_reflections;
+    app->scene.planes[0].position = vec3(0.0f, 20.0f, 0.0f);
+    app->scene.planes[0].normal = vec3(0.0f, -1.0f, 0.0f);
+    app->scene.planes[0].color = 0xe3e3e3;
+    app->scene.planes[0].reflection = plane_reflections;
 
-    scene.planes[1].position = vec3(-110.0f, 20.0f, 0.0f);
-    scene.planes[1].normal = vec3(1.0f, 0.0f, 0.0f);
-    scene.planes[1].color = 0xff0000;
-    scene.planes[1].reflection = plane_reflections;
+    app->scene.planes[1].position = vec3(-110.0f, 20.0f, 0.0f);
+    app->scene.planes[1].normal = vec3(1.0f, 0.0f, 0.0f);
+    app->scene.planes[1].color = 0xff0000;
+    app->scene.planes[1].reflection = plane_reflections;
 
-    scene.planes[2].position = vec3(110.0f, 20.0f, 0.0f);
-    scene.planes[2].normal = vec3(-1.0f, 0.0f, 0.0f);
-    scene.planes[2].color = 0x00ff00;
-    scene.planes[2].reflection = plane_reflections;
+    app->scene.planes[2].position = vec3(110.0f, 20.0f, 0.0f);
+    app->scene.planes[2].normal = vec3(-1.0f, 0.0f, 0.0f);
+    app->scene.planes[2].color = 0x00ff00;
+    app->scene.planes[2].reflection = plane_reflections;
 
-    scene.planes[3].position = vec3(0.0f, 0.0f, 80.0f);
-    scene.planes[3].normal = vec3(0.0f, 0.0f, -1.0f);
-    scene.planes[3].color = 0xbbbbbb;
-    scene.planes[3].reflection = plane_reflections;
+    app->scene.planes[3].position = vec3(0.0f, 0.0f, 80.0f);
+    app->scene.planes[3].normal = vec3(0.0f, 0.0f, -1.0f);
+    app->scene.planes[3].color = 0xbbbbbb;
+    app->scene.planes[3].reflection = plane_reflections;
 
-    scene.planes[4].position = vec3(0.0f, -110.0f, 0.0f);
-    scene.planes[4].normal = vec3(0.0f, 1.0f, 0.0f);
-    scene.planes[4].color = 0xe3e3e3;
-    scene.planes[4].reflection = plane_reflections;
+    app->scene.planes[4].position = vec3(0.0f, -110.0f, 0.0f);
+    app->scene.planes[4].normal = vec3(0.0f, 1.0f, 0.0f);
+    app->scene.planes[4].color = 0xe3e3e3;
+    app->scene.planes[4].reflection = plane_reflections;
 
-    scene.planes[5].position = vec3(0.0f, 0.0f, -130.0f);
-    scene.planes[5].normal = vec3(0.0f, 0.0f, 1.0f);
-    scene.planes[5].color = 0xbbbbbb;
-    scene.planes[5].reflection = plane_reflections;
+    app->scene.planes[5].position = vec3(0.0f, 0.0f, -130.0f);
+    app->scene.planes[5].normal = vec3(0.0f, 0.0f, 1.0f);
+    app->scene.planes[5].color = 0xbbbbbb;
+    app->scene.planes[5].reflection = plane_reflections;
+  }
+
+  app->number_of_iterations = 10;
+
+  app->total_time += 1.0f/24.0f;
+
+  if (memory->should_reload) {
+    memory->should_reload = false;
+
+    drawRect(buffer, 0, 0, buffer->width, buffer->height, 0);
 
 #if 1
       memory->should_reload = true;
@@ -315,8 +313,8 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
     memory->should_reload = true;
 #endif
 
-    int tile_count_x = 6;
-    int tile_count_y = 6;
+    int tile_count_x = 16;
+    int tile_count_y = 16;
 
     RenderScreenEntry entries[tile_count_x * tile_count_y];
 
@@ -336,7 +334,7 @@ void tick(Memory *memory, Input input, GameOffscreenBuffer *buffer) {
         entry->maxY = entry->minY + tile_height;
         entry->memory = memory;
         entry->app = app;
-        entry->scene = &scene;
+        entry->scene = &app->scene;
 
 #if 1
         memory->add_work(memory->queue, render_screen_task, entry);
