@@ -12,10 +12,6 @@ Very simple raytracer written in C.
 
 ## Installation
 
-### Requirements
-
-- Installed SDL2
-
 ### Compilation
 
 #### OSX
