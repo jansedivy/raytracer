@@ -274,4 +274,6 @@ int main() {
 
     SDL_GL_SwapWindow(window);
   }
+
+  return 1;
 }
