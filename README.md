@@ -21,6 +21,6 @@ Very simple raytracer written in C.
 #### OSX
 ```
 ./build.sh # compile
-./build/raytracer # run
+open build/raytracer.app # run
 ```
 
