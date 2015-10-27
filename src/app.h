@@ -6,6 +6,7 @@
 
 #include <math.h>
 #include "math_lib.h"
+#include "float.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
@@ -13,8 +14,7 @@
 
 #define array_count(arr) (sizeof(arr) / sizeof(arr[0]))
 
-// TODO(sedivy): better max distance
-#define max_distance 300000.0f
+#define max_distance FLT_MAX
 
 #include "platform.h"
 
